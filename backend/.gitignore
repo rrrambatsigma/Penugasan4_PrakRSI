@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+.vscode
+.venv
+alembic/__pycache__/
+**/__pycache__/
+*.db
+*.log

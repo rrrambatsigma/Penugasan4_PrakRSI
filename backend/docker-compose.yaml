@@ -1,0 +1,30 @@
+services:
+  postgres:
+    container_name: database_penugasan4
+    image: postgres:18-alpine
+    restart: always
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres_data_penugasan4:/var/lib/postgresql/data
+    env_file: .env
+    networks:
+      - rsinet4
+
+  pgadmin:
+    image: dpage/pgadmin4:9.10.0
+    container_name: pgadmin_prakrsi4
+    env_file: .env
+    ports:
+      - "5439:80"
+    depends_on:
+      - postgres
+    networks:
+      - rsinet4
+
+volumes:
+  postgres_data_penugasan4:
+
+networks:
+  rsinet4:
+    driver: bridge
