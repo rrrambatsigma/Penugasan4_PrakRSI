@@ -60,6 +60,11 @@ export default function RegisterAdminPage() {
       return false;
     }
 
+    if (form.username.trim().length > 16) {
+      toast.error("Username maksimal 16 karakter");
+      return false;
+    }
+
     if (!form.email.trim()) {
       toast.error("Email wajib diisi");
       return false;
@@ -117,11 +122,11 @@ export default function RegisterAdminPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            first_name: form.first_name,
-            last_name: form.last_name,
-            whatsapp_number: form.whatsapp_number,
-            username: form.username,
-            email: form.email,
+            first_name: form.first_name.trim(),
+            last_name: form.last_name.trim(),
+            whatsapp_number: form.whatsapp_number.trim(),
+            username: form.username.trim(),
+            email: form.email.trim(),
             password: form.password,
           }),
         }
@@ -168,7 +173,7 @@ export default function RegisterAdminPage() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe,transparent_32%),linear-gradient(to_bottom,#ffffff,#f8fafc)] px-4 py-8 font-sans text-slate-900">
       <div className="mx-auto flex min-h-[calc(100vh-64px)] w-full max-w-6xl items-center justify-center">
         <div className="grid w-full overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.14)] lg:grid-cols-[0.8fr_1.2fr]">
-          <section className="relative hidden overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <section className="relative hidden overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-10 text-white lg:flex lg:flex-col">
             <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-indigo-400/20 blur-3xl" />
             <div className="absolute -bottom-24 -right-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl" />
             <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.10)_0%,transparent_38%,rgba(79,70,229,0.18)_100%)]" />
@@ -277,20 +282,32 @@ export default function RegisterAdminPage() {
               </div>
 
               <div>
-                <label
-                  htmlFor="username"
-                  className="mb-2 block text-sm font-bold text-slate-700"
-                >
-                  Username
-                </label>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="username"
+                    className="block text-sm font-bold text-slate-700"
+                  >
+                    Username
+                  </label>
+
+                  <span className="text-xs font-medium text-slate-400">
+                    {form.username.length}/16
+                  </span>
+                </div>
+
                 <input
                   id="username"
                   name="username"
                   type="text"
                   value={form.username}
+                  maxLength={16}
                   onChange={handleChange}
                   className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-800 focus:bg-white focus:ring-4 focus:ring-slate-100"
                 />
+
+                <p className="mt-2 text-xs font-medium text-slate-500">
+                  Username maksimal 16 karakter.
+                </p>
               </div>
 
               <div>
