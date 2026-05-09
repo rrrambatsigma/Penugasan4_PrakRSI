@@ -25,8 +25,34 @@ export default function AddEventPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!name || !description || !quota || !startDate || !endDate) {
+    if (!name.trim() || !description.trim() || !quota || !startDate || !endDate) {
       showMessage("Semua field wajib diisi.", "error")
+      return
+    }
+
+    const quotaNumber = Number(quota)
+
+    if (isNaN(quotaNumber) || quotaNumber <= 0) {
+      showMessage("Kuota tidak boleh 0. Masukkan minimal 1 peserta.", "error")
+      return
+    }
+
+    const now = new Date()
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+
+    if (start < now) {
+      showMessage("Tanggal mulai tidak boleh tanggal atau waktu yang sudah lewat.", "error")
+      return
+    }
+
+    if (end < now) {
+      showMessage("Tanggal selesai tidak boleh tanggal atau waktu yang sudah lewat.", "error")
+      return
+    }
+
+    if (end <= start) {
+      showMessage("Tanggal selesai harus lebih akhir dari tanggal mulai.", "error")
       return
     }
 
@@ -47,9 +73,9 @@ export default function AddEventPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name,
-          description,
-          quota: Number(quota),
+          name: name.trim(),
+          description: description.trim(),
+          quota: quotaNumber,
           start_date: `${startDate}:00`,
           end_date: `${endDate}:00`,
         }),
@@ -136,6 +162,7 @@ export default function AddEventPage() {
               </label>
               <input
                 type="number"
+                min="1"
                 className="w-full rounded-2xl border border-slate-200 p-4 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 placeholder="Contoh: 80"
                 value={quota}
