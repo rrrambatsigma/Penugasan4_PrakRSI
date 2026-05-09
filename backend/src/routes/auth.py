@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, Response, Security, status, HTT
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.controllers.auth import AuthController
-from src.dto.auth import LoginRequest, LogoutRequest, RegisterRequest, RefreshRequest
+from src.dto.auth import LoginRequest, LogoutRequest, RegisterRequest, RefreshRequest, LoginResponse, LogoutResponse, RegisterResponse, RefreshResponse, RegisterResponse, LogoutResponse
 
 auth_router = APIRouter(tags=["Authentikasi"])
 
@@ -25,11 +25,11 @@ def register_admin(
     return response
 
 
-@auth_router.post("/login", status_code=status.HTTP_200_OK)
+@auth_router.post("/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
 def login(
     req_body: LoginRequest,
     controller: AuthController = Depends(AuthController),
-) -> Response:
+) -> LoginResponse: 
     response = controller.login(req_body)
     return response
 
@@ -45,12 +45,12 @@ def logout(
     return response
 
 
-@auth_router.post("/refresh", status_code=status.HTTP_200_OK)
+@auth_router.post("/refresh", status_code=status.HTTP_200_OK, response_model=LoginResponse)
 def refresh(
     req_body: RefreshRequest,
     request: Request,
     controller: AuthController = Depends(AuthController),
-) -> Response:
+) -> LoginResponse: # Berubah dari Response ke LoginResponse
     if req_body.refresh_token is None:
         req_body.refresh_token = request.cookies.get("refresh_token")
 
