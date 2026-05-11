@@ -11,13 +11,13 @@ interface Event {
   ended_at: string;
 }
 
-
 export default function EventsPage() {
-const [events, setEvents] = useState<Event[]>([]);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState("");
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState(""); // tambahan untuk search
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -36,21 +36,15 @@ const [filter, setFilter] = useState("all");
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
-
       const response = await fetch(`${API_URL}/events/`);
-
       if (!response.ok) {
         throw new Error("Failed fetch events");
       }
-
       const result = await response.json();
-
       console.log(result);
-
       setEvents(result.data || []);
     } catch (error) {
       console.error(error);
-
       setError("Failed connect to backend");
     } finally {
       setLoading(false);
@@ -59,12 +53,10 @@ const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-
     if (!token) {
-      window.location.href = "http://localhost:3000/auth/login"
+      window.location.href = "http://localhost:3000/auth/login";
       return;
     }
-
     fetchEvents();
   }, [fetchEvents]);
 
@@ -80,17 +72,25 @@ const [filter, setFilter] = useState("all");
   const getEventStatus = (endedAt: string) => {
     const now = new Date();
     const end = new Date(endedAt);
-
     return end < now ? "done" : "active";
   };
 
+  // Filter berdasarkan status + search keyword
   const filteredEvents = events.filter((event) => {
+    // filter by status
     if (filter === "active") {
-      return getEventStatus(event.ended_at) === "active";
+      if (getEventStatus(event.ended_at) !== "active") return false;
+    }
+    if (filter === "done") {
+      if (getEventStatus(event.ended_at) !== "done") return false;
     }
 
-    if (filter === "done") {
-      return getEventStatus(event.ended_at) === "done";
+    // filter by search term (case-insensitive)
+    if (searchTerm.trim() !== "") {
+      const keyword = searchTerm.toLowerCase();
+      const matchName = event.name.toLowerCase().includes(keyword);
+      const matchDesc = event.description.toLowerCase().includes(keyword);
+      if (!matchName && !matchDesc) return false;
     }
 
     return true;
@@ -104,35 +104,26 @@ const [filter, setFilter] = useState("all");
 
   const formatInputDate = (date: string) => {
     const localDate = new Date(date);
-
-    localDate.setMinutes(
-      localDate.getMinutes() - localDate.getTimezoneOffset()
-    );
-
+    localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
     return localDate.toISOString().slice(0, 16);
   };
 
   const openEditModal = (event: Event) => {
     setSelectedId(event.id);
-
     setName(event.name);
     setDescription(event.description);
     setQuota(String(event.quota));
-
     setStartDate(formatInputDate(event.started_at));
     setEndDate(formatInputDate(event.ended_at));
-
     setShowEditModal(true);
   };
 
   const handleCreate = async () => {
     const token = localStorage.getItem("token");
-
     if (!token) {
       alert("Login terlebih dahulu");
       return;
     }
-
     try {
       const response = await fetch(`${API_URL}/events/`, {
         method: "POST",
@@ -148,16 +139,12 @@ const [filter, setFilter] = useState("all");
           end_date: `${endDate}:00`,
         }),
       });
-
       if (!response.ok) {
         alert("Gagal membuat event");
         return;
       }
-
       setShowCreateModal(false);
-
       resetForm();
-
       fetchEvents();
     } catch (error) {
       console.error(error);
@@ -166,42 +153,32 @@ const [filter, setFilter] = useState("all");
 
   const handleEdit = async () => {
     if (!selectedId) return;
-
     const token = localStorage.getItem("token");
-
     if (!token) {
       alert("Login terlebih dahulu");
       return;
     }
-
     try {
-      const response = await fetch(
-        `${API_URL}/events/${selectedId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name,
-            description,
-            quota: Number(quota),
-            start_date: `${startDate}:00`,
-            end_date: `${endDate}:00`,
-          }),
-        }
-      );
-
+      const response = await fetch(`${API_URL}/events/${selectedId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name,
+          description,
+          quota: Number(quota),
+          start_date: `${startDate}:00`,
+          end_date: `${endDate}:00`,
+        }),
+      });
       if (!response.ok) {
         alert("Gagal update event");
         return;
       }
-
       setShowEditModal(false);
-
       resetForm();
-
       fetchEvents();
     } catch (error) {
       console.error(error);
@@ -210,36 +187,71 @@ const [filter, setFilter] = useState("all");
 
   const handleDelete = async () => {
     if (!selectedId) return;
-
     const token = localStorage.getItem("token");
-
     if (!token) {
       alert("Login terlebih dahulu");
       return;
     }
-
     try {
-      const response = await fetch(
-        `${API_URL}/events/${selectedId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+      const response = await fetch(`${API_URL}/events/${selectedId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         alert("Gagal menghapus event");
         return;
       }
-
       setShowDeleteModal(false);
-
       fetchEvents();
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const handleExportCSV = () => {
+    if (filteredEvents.length === 0) {
+      alert("Tidak ada data untuk diekspor");
+      return;
+    }
+
+    const headers = [
+      "ID",
+      "Nama Event",
+      "Deskripsi",
+      "Kuota",
+      "Tanggal Mulai",
+      "Tanggal Selesai",
+      "Status",
+    ];
+
+    const rows = filteredEvents.map((event) => {
+      const status = getEventStatus(event.ended_at) === "done" ? "Selesai" : "Aktif";
+      return [
+        event.id,
+        `"${event.name.replace(/"/g, '""')}"`,
+        `"${event.description.replace(/"/g, '""')}"`,
+        event.quota,
+        formatDate(event.started_at),
+        formatDate(event.ended_at),
+        status,
+      ];
+    });
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute("download", "events.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -253,189 +265,187 @@ const [filter, setFilter] = useState("all");
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 p-8">
       <div className="mx-auto max-w-7xl">
+        {/* Header */}
         <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-indigo-600">
               Acara RSI
             </p>
-
             <h1 className="text-5xl font-bold tracking-tight text-slate-950">
               Event Management
             </h1>
-
             <p className="mt-3 text-slate-600">
               Kelola seluruh event competition.
             </p>
           </div>
-
-          <button
-            onClick={() => {
-              resetForm();
-              setShowCreateModal(true);
-            }}
-            className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700"
-          >
-            + Create Event
-          </button>
         </div>
 
-        <div className="mb-8 flex flex-wrap gap-3">
-          <button
-            onClick={() => setFilter("all")}
-            className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-              filter === "all"
-                ? "bg-indigo-600 text-white"
-                : "border border-slate-200 bg-white text-slate-600"
-            }`}
-          >
-            Semua
-          </button>
+        {/* Filter & Actions */}
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="w-full md:max-w-sm">
+            <input
+              type="text"
+              placeholder="Search event..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-indigo-500"
+            />
+          </div>
 
-          <button
-            onClick={() => setFilter("active")}
-            className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-              filter === "active"
-                ? "bg-emerald-600 text-white"
-                : "border border-slate-200 bg-white text-slate-600"
-            }`}
-          >
-            Active
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                resetForm();
+                setShowCreateModal(true);
+              }}
+              className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-700"
+            >
+              + Create
+            </button>
 
-          <button
-            onClick={() => setFilter("done")}
-            className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-              filter === "done"
-                ? "bg-gray-700 text-white"
-                : "border border-slate-200 bg-white text-slate-600"
-            }`}
-          >
-            Done
-          </button>
+            <button
+              onClick={handleExportCSV}
+              className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600"
+            >
+              Export CSV
+            </button>
+          </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {filteredEvents.map((event) => {
-            const isDone = getEventStatus(event.ended_at) === "done";
-            const status =
-              event.quota === 0
-                ? {
-                    label: "Penuh",
-                    badge: "bg-gray-200 text-gray-700",
-                    progress: "bg-gray-400",
-                  }
-                : isDone
-                ? {
-                    label: "Done",
-                    badge: "bg-slate-200 text-slate-700",
-                    progress: "bg-slate-500",
-                  }
-                : event.quota <= 10
-                ? {
-                    label: "Hampir Penuh",
-                    badge: "bg-orange-100 text-orange-700",
-                    progress: "bg-orange-500",
-                  }
-                : {
-                    label: "Tersedia",
-                    badge: "bg-emerald-100 text-emerald-700",
-                    progress: "bg-emerald-500",
-                  };
-                  
-            return (
-              <div
-                key={event.id}
-                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-indigo-200 hover:shadow-xl"
-              >
-                <div className="mb-5 flex items-center justify-between">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${status.badge}`}
-                  >
-                    {status.label}
-                  </span>
-
-                  <span className="text-xs font-bold uppercase text-indigo-600">
-                    {formatDate(event.started_at)}
-                  </span>
-                </div>
-
-                <h2 className="text-xl font-bold text-slate-950">
-                  {event.name}
-                </h2>
-
-                <p className="mt-3 min-h-[72px] text-sm leading-6 text-slate-500">
-                  {event.description}
-                </p>
-
-                <div className="mt-5">
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                    Quota Status
-                  </p>
-
-                  <p className="mt-1 text-sm font-bold text-slate-800">
-                    {event.quota} Participant Slots
-                  </p>
-
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={`h-full rounded-full ${status.progress}`}
-                      style={{
-                        width:
-                          event.quota >= 100
-                            ? "55%"
-                            : event.quota >= 50
-                            ? "70%"
-                            : event.quota >= 10
-                            ? "85%"
-                            : "100%",
-                      }}                    />
-                  </div>
-                </div>
-
-                <div className="mt-5 text-xs text-slate-500">
-                  <p>Mulai: {formatDate(event.started_at)}</p>
-                  <p>Selesai: {formatDate(event.ended_at)}</p>
-                </div>
-
-                <div className="mt-6 flex gap-3">
-                  <>
-                    <button
-                      onClick={() => openEditModal(event)}
-                      className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-indigo-700"
+        {/* Tabel Events */}
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100 text-slate-700">
+                <tr>
+                  <th className="px-6 py-4 text-left font-bold">Event</th>
+                  <th className="px-6 py-4 text-left font-bold">Quota</th>
+                  <th className="px-6 py-4 text-left font-bold">Start Date</th>
+                  <th className="px-6 py-4 text-left font-bold">End Date</th>
+                  <th className="px-6 py-4 text-left font-bold">Status</th>
+                  <th className="px-6 py-4 text-center font-bold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEvents.map((event) => {
+                  const isDone = getEventStatus(event.ended_at) === "done";
+                  const status =
+                    event.quota === 0
+                      ? {
+                          label: "Penuh",
+                          badge: "bg-gray-200 text-gray-700",
+                        }
+                      : isDone
+                      ? {
+                          label: "Done",
+                          badge: "bg-slate-200 text-slate-700",
+                        }
+                      : event.quota <= 10
+                      ? {
+                          label: "Hampir Penuh",
+                          badge: "bg-orange-100 text-orange-700",
+                        }
+                      : {
+                          label: "Tersedia",
+                          badge: "bg-emerald-100 text-emerald-700",
+                        };
+                  return (
+                    <tr
+                      key={event.id}
+                      className="border-t border-slate-100 transition hover:bg-slate-50"
                     >
-                      Edit
-                    </button>
+                      <td className="px-6 py-5">
+                        <div>
+                          <p className="font-bold text-slate-900">
+                            {event.name}
+                          </p>
+                          <p className="mt-1 max-w-xs text-xs text-slate-500">
+                            {event.description}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 font-semibold text-slate-700">
+                        {event.quota}
+                      </td>
+                      <td className="px-6 py-5 text-slate-600">
+                        {formatDate(event.started_at)}
+                      </td>
+                      <td className="px-6 py-5 text-slate-600">
+                        {formatDate(event.ended_at)}
+                      </td>
+                      <td className="px-6 py-5">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-bold ${status.badge}`}
+                        >
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openEditModal(event)}
+                            className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedId(event.id);
+                              setShowDeleteModal(true);
+                            }}
+                            className="rounded-xl bg-red-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredEvents.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                      Tidak ada event yang ditemukan.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
-                    <button
-                      onClick={() => {
-                        setSelectedId(event.id);
-                        setShowDeleteModal(true);
-                      }}
-                      className="flex-1 rounded-xl bg-red-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  </>
-                </div>
-              </div>
-            );
-          })}
+          {/* Pagination placeholder */}
+          <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
+            <div className="text-sm text-slate-500">Rows per page: 10</div>
+            <div className="flex items-center gap-2">
+              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">
+                {"<<"}
+              </button>
+              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">
+                {"<"}
+              </button>
+              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">
+                {">"}
+              </button>
+              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">
+                {">>"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Modal Create / Edit */}
       {(showCreateModal || showEditModal) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
             <h2 className="text-2xl font-bold text-slate-900">
               {showCreateModal ? "Create Event" : "Edit Event"}
             </h2>
-
             <div className="mt-6 space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Nama Event
                 </label>
-
                 <input
                   type="text"
                   placeholder="Nama Event"
@@ -444,7 +454,6 @@ const [filter, setFilter] = useState("all");
                   className="w-full rounded-2xl border border-slate-200 p-4 outline-none focus:border-indigo-500"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Detail Event
@@ -456,12 +465,10 @@ const [filter, setFilter] = useState("all");
                   className="min-h-32 w-full rounded-2xl border border-slate-200 p-4 outline-none focus:border-indigo-500"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Slots Peserta
                 </label>
-
                 <input
                   type="number"
                   placeholder="Contoh: 100"
@@ -470,12 +477,10 @@ const [filter, setFilter] = useState("all");
                   className="w-full rounded-2xl border border-slate-200 p-4 outline-none transition focus:border-indigo-500"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Tanggal Mulai
                 </label>
-
                 <input
                   type="datetime-local"
                   value={startDate}
@@ -483,12 +488,10 @@ const [filter, setFilter] = useState("all");
                   className="w-full rounded-2xl border border-slate-200 p-4 outline-none transition focus:border-indigo-500"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Tanggal Selesai
                 </label>
-
                 <input
                   type="datetime-local"
                   value={endDate}
@@ -496,7 +499,6 @@ const [filter, setFilter] = useState("all");
                   className="w-full rounded-2xl border border-slate-200 p-4 outline-none transition focus:border-indigo-500"
                 />
               </div>
-
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={() => {
@@ -508,7 +510,6 @@ const [filter, setFilter] = useState("all");
                 >
                   Cancel
                 </button>
-
                 <button
                   onClick={showCreateModal ? handleCreate : handleEdit}
                   className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700"
@@ -521,17 +522,14 @@ const [filter, setFilter] = useState("all");
         </div>
       )}
 
+      {/* Modal Delete */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-            <h2 className="text-2xl font-bold text-slate-900">
-              Hapus Event?
-            </h2>
-
+            <h2 className="text-2xl font-bold text-slate-900">Hapus Event?</h2>
             <p className="mt-3 text-slate-500">
               Event akan dihapus permanen.
             </p>
-
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
@@ -539,7 +537,6 @@ const [filter, setFilter] = useState("all");
               >
                 Cancel
               </button>
-
               <button
                 onClick={handleDelete}
                 className="flex-1 rounded-xl bg-red-500 px-4 py-3 font-semibold text-white hover:bg-red-600"
