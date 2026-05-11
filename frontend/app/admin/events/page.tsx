@@ -17,10 +17,9 @@ export default function EventsPage() {
   const [error, setError] = useState("");
 
   const [filter, setFilter] = useState("all");
-  const [searchTerm, setSearchTerm] = useState(""); // tambahan untuk search
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -33,15 +32,23 @@ export default function EventsPage() {
 
   const API_URL = "http://127.0.0.1:8000";
 
+  // Fungsi logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "http://localhost:3000/auth/login";
+  };
+
+  // Fungsi back to landing
+  const handleBackToLanding = () => {
+    window.location.href = "http://localhost:3000"; // ganti dengan URL landing Anda
+  };
+
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/events/`);
-      if (!response.ok) {
-        throw new Error("Failed fetch events");
-      }
+      if (!response.ok) throw new Error("Failed fetch events");
       const result = await response.json();
-      console.log(result);
       setEvents(result.data || []);
     } catch (error) {
       console.error(error);
@@ -75,31 +82,22 @@ export default function EventsPage() {
     return end < now ? "done" : "active";
   };
 
-  // Filter berdasarkan status + search keyword
   const filteredEvents = events.filter((event) => {
-    // filter by status
-    if (filter === "active") {
-      if (getEventStatus(event.ended_at) !== "active") return false;
-    }
-    if (filter === "done") {
-      if (getEventStatus(event.ended_at) !== "done") return false;
-    }
-
-    // filter by search term (case-insensitive)
+    if (filter === "active" && getEventStatus(event.ended_at) !== "active")
+      return false;
+    if (filter === "done" && getEventStatus(event.ended_at) !== "done")
+      return false;
     if (searchTerm.trim() !== "") {
       const keyword = searchTerm.toLowerCase();
       const matchName = event.name.toLowerCase().includes(keyword);
       const matchDesc = event.description.toLowerCase().includes(keyword);
       if (!matchName && !matchDesc) return false;
     }
-
     return true;
   });
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleString("id-ID", {
-      timeZone: "Asia/Jakarta",
-    });
+    return new Date(date).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
   };
 
   const formatInputDate = (date: string) => {
@@ -122,6 +120,7 @@ export default function EventsPage() {
     const token = localStorage.getItem("token");
     if (!token) {
       alert("Login terlebih dahulu");
+      window.location.href = "http://localhost:3000/auth/login";
       return;
     }
     try {
@@ -139,6 +138,12 @@ export default function EventsPage() {
           end_date: `${endDate}:00`,
         }),
       });
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        alert("Sesi habis, silakan login ulang.");
+        window.location.href = "http://localhost:3000/auth/login";
+        return;
+      }
       if (!response.ok) {
         alert("Gagal membuat event");
         return;
@@ -148,6 +153,7 @@ export default function EventsPage() {
       fetchEvents();
     } catch (error) {
       console.error(error);
+      alert("Terjadi kesalahan jaringan");
     }
   };
 
@@ -156,6 +162,7 @@ export default function EventsPage() {
     const token = localStorage.getItem("token");
     if (!token) {
       alert("Login terlebih dahulu");
+      window.location.href = "http://localhost:3000/auth/login";
       return;
     }
     try {
@@ -173,6 +180,12 @@ export default function EventsPage() {
           end_date: `${endDate}:00`,
         }),
       });
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        alert("Sesi habis, silakan login ulang.");
+        window.location.href = "http://localhost:3000/auth/login";
+        return;
+      }
       if (!response.ok) {
         alert("Gagal update event");
         return;
@@ -182,6 +195,7 @@ export default function EventsPage() {
       fetchEvents();
     } catch (error) {
       console.error(error);
+      alert("Terjadi kesalahan jaringan");
     }
   };
 
@@ -190,6 +204,7 @@ export default function EventsPage() {
     const token = localStorage.getItem("token");
     if (!token) {
       alert("Login terlebih dahulu");
+      window.location.href = "http://localhost:3000/auth/login";
       return;
     }
     try {
@@ -199,6 +214,12 @@ export default function EventsPage() {
           Authorization: `Bearer ${token}`,
         },
       });
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        alert("Sesi habis, silakan login ulang.");
+        window.location.href = "http://localhost:3000/auth/login";
+        return;
+      }
       if (!response.ok) {
         alert("Gagal menghapus event");
         return;
@@ -207,6 +228,7 @@ export default function EventsPage() {
       fetchEvents();
     } catch (error) {
       console.error(error);
+      alert("Terjadi kesalahan jaringan");
     }
   };
 
@@ -215,17 +237,7 @@ export default function EventsPage() {
       alert("Tidak ada data untuk diekspor");
       return;
     }
-
-    const headers = [
-      "ID",
-      "Nama Event",
-      "Deskripsi",
-      "Kuota",
-      "Tanggal Mulai",
-      "Tanggal Selesai",
-      "Status",
-    ];
-
+    const headers = ["ID", "Nama Event", "Deskripsi", "Kuota", "Tanggal Mulai", "Tanggal Selesai", "Status"];
     const rows = filteredEvents.map((event) => {
       const status = getEventStatus(event.ended_at) === "done" ? "Selesai" : "Aktif";
       return [
@@ -238,11 +250,7 @@ export default function EventsPage() {
         status,
       ];
     });
-
-    const csvContent = [headers, ...rows]
-      .map((row) => row.join(","))
-      .join("\n");
-
+    const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -265,7 +273,7 @@ export default function EventsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 p-8">
       <div className="mx-auto max-w-7xl">
-        {/* Header */}
+        {/* Header dengan tombol logout & back */}
         <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-indigo-600">
@@ -278,9 +286,23 @@ export default function EventsPage() {
               Kelola seluruh event competition.
             </p>
           </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleBackToLanding}
+              className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600"
+            >
+              ← Back to Landing
+            </button>
+            <button
+              onClick={handleLogout}
+              className="rounded-2xl border border-red-300 bg-white px-5 py-3 text-sm font-bold text-red-600 transition hover:bg-red-50"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
-        {/* Filter & Actions */}
+        {/* Filter dan Actions */}
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="w-full md:max-w-sm">
             <input
@@ -291,7 +313,6 @@ export default function EventsPage() {
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-indigo-500"
             />
           </div>
-
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
@@ -302,7 +323,6 @@ export default function EventsPage() {
             >
               + Create
             </button>
-
             <button
               onClick={handleExportCSV}
               className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600"
@@ -312,7 +332,7 @@ export default function EventsPage() {
           </div>
         </div>
 
-        {/* Tabel Events */}
+        {/* Tabel Events (sama seperti sebelumnya) */}
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -331,70 +351,34 @@ export default function EventsPage() {
                   const isDone = getEventStatus(event.ended_at) === "done";
                   const status =
                     event.quota === 0
-                      ? {
-                          label: "Penuh",
-                          badge: "bg-gray-200 text-gray-700",
-                        }
+                      ? { label: "Penuh", badge: "bg-gray-200 text-gray-700" }
                       : isDone
-                      ? {
-                          label: "Done",
-                          badge: "bg-slate-200 text-slate-700",
-                        }
+                      ? { label: "Done", badge: "bg-slate-200 text-slate-700" }
                       : event.quota <= 10
-                      ? {
-                          label: "Hampir Penuh",
-                          badge: "bg-orange-100 text-orange-700",
-                        }
-                      : {
-                          label: "Tersedia",
-                          badge: "bg-emerald-100 text-emerald-700",
-                        };
+                      ? { label: "Hampir Penuh", badge: "bg-orange-100 text-orange-700" }
+                      : { label: "Tersedia", badge: "bg-emerald-100 text-emerald-700" };
                   return (
-                    <tr
-                      key={event.id}
-                      className="border-t border-slate-100 transition hover:bg-slate-50"
-                    >
+                    <tr key={event.id} className="border-t border-slate-100 transition hover:bg-slate-50">
                       <td className="px-6 py-5">
                         <div>
-                          <p className="font-bold text-slate-900">
-                            {event.name}
-                          </p>
-                          <p className="mt-1 max-w-xs text-xs text-slate-500">
-                            {event.description}
-                          </p>
+                          <p className="font-bold text-slate-900">{event.name}</p>
+                          <p className="mt-1 max-w-xs text-xs text-slate-500">{event.description}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-5 font-semibold text-slate-700">
-                        {event.quota}
-                      </td>
-                      <td className="px-6 py-5 text-slate-600">
-                        {formatDate(event.started_at)}
-                      </td>
-                      <td className="px-6 py-5 text-slate-600">
-                        {formatDate(event.ended_at)}
-                      </td>
+                      <td className="px-6 py-5 font-semibold text-slate-700">{event.quota}</td>
+                      <td className="px-6 py-5 text-slate-600">{formatDate(event.started_at)}</td>
+                      <td className="px-6 py-5 text-slate-600">{formatDate(event.ended_at)}</td>
                       <td className="px-6 py-5">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-bold ${status.badge}`}
-                        >
+                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${status.badge}`}>
                           {status.label}
                         </span>
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => openEditModal(event)}
-                            className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
-                          >
+                          <button onClick={() => openEditModal(event)} className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-700">
                             Edit
                           </button>
-                          <button
-                            onClick={() => {
-                              setSelectedId(event.id);
-                              setShowDeleteModal(true);
-                            }}
-                            className="rounded-xl bg-red-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-600"
-                          >
+                          <button onClick={() => { setSelectedId(event.id); setShowDeleteModal(true); }} className="rounded-xl bg-red-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-600">
                             Delete
                           </button>
                         </div>
@@ -412,29 +396,20 @@ export default function EventsPage() {
               </tbody>
             </table>
           </div>
-
-          {/* Pagination placeholder */}
+          {/* Pagination placeholder... */}
           <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
             <div className="text-sm text-slate-500">Rows per page: 10</div>
             <div className="flex items-center gap-2">
-              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">
-                {"<<"}
-              </button>
-              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">
-                {"<"}
-              </button>
-              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">
-                {">"}
-              </button>
-              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">
-                {">>"}
-              </button>
+              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">{"<<"}</button>
+              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">{"<"}</button>
+              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">{">"}</button>
+              <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-100">{">>"}</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal Create / Edit */}
+      {/* Modal Create/Edit (sama) */}
       {(showCreateModal || showEditModal) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
@@ -442,80 +417,30 @@ export default function EventsPage() {
               {showCreateModal ? "Create Event" : "Edit Event"}
             </h2>
             <div className="mt-6 space-y-5">
+              {/* ... input fields ... */}
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Nama Event
-                </label>
-                <input
-                  type="text"
-                  placeholder="Nama Event"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 p-4 outline-none focus:border-indigo-500"
-                />
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Nama Event</label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-2xl border p-4" />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Detail Event
-                </label>
-                <textarea
-                  placeholder="Deskripsi"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="min-h-32 w-full rounded-2xl border border-slate-200 p-4 outline-none focus:border-indigo-500"
-                />
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Detail Event</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-2xl border p-4" />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Slots Peserta
-                </label>
-                <input
-                  type="number"
-                  placeholder="Contoh: 100"
-                  value={quota}
-                  onChange={(e) => setQuota(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 p-4 outline-none transition focus:border-indigo-500"
-                />
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Slots Peserta</label>
+                <input type="number" value={quota} onChange={(e) => setQuota(e.target.value)} className="w-full rounded-2xl border p-4" />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Tanggal Mulai
-                </label>
-                <input
-                  type="datetime-local"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 p-4 outline-none transition focus:border-indigo-500"
-                />
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Tanggal Mulai</label>
+                <input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-2xl border p-4" />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Tanggal Selesai
-                </label>
-                <input
-                  type="datetime-local"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 p-4 outline-none transition focus:border-indigo-500"
-                />
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Tanggal Selesai</label>
+                <input type="datetime-local" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full rounded-2xl border p-4" />
               </div>
               <div className="mt-6 flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setShowEditModal(false);
-                    resetForm();
-                  }}
-                  className="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={showCreateModal ? handleCreate : handleEdit}
-                  className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700"
-                >
-                  Save
-                </button>
+                <button onClick={() => { setShowCreateModal(false); setShowEditModal(false); resetForm(); }} className="flex-1 rounded-xl border px-4 py-3">Cancel</button>
+                <button onClick={showCreateModal ? handleCreate : handleEdit} className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-white">Save</button>
               </div>
             </div>
           </div>
@@ -527,22 +452,10 @@ export default function EventsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <h2 className="text-2xl font-bold text-slate-900">Hapus Event?</h2>
-            <p className="mt-3 text-slate-500">
-              Event akan dihapus permanen.
-            </p>
+            <p className="mt-3 text-slate-500">Event akan dihapus permanen.</p>
             <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 rounded-xl border border-slate-300 px-4 py-3"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 rounded-xl bg-red-500 px-4 py-3 font-semibold text-white hover:bg-red-600"
-              >
-                Delete
-              </button>
+              <button onClick={() => setShowDeleteModal(false)} className="flex-1 rounded-xl border px-4 py-3">Cancel</button>
+              <button onClick={handleDelete} className="flex-1 rounded-xl bg-red-500 px-4 py-3 text-white">Delete</button>
             </div>
           </div>
         </div>
