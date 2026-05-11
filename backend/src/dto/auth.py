@@ -32,6 +32,7 @@ class LoginData(BaseModel):
         default="", examples=["liaustgdf98723giuj3br927835t0g238tgr20385trg20385g203"]
     )
     refresh_token: str = Field(default="", examples=["qwijkrgq089725tg231987u5g2890"])
+    role: str = Field(default="user", examples=["user", "admin"])
 
 
 class LoginResponse(BaseResponse):
