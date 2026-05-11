@@ -1,3 +1,4 @@
+##from backend.src.dto import account
 from fastapi import Depends, HTTPException
 from datetime import timedelta
 from starlette import status
@@ -141,7 +142,11 @@ class AuthService:
 
         return LoginResponse(
             code=status.HTTP_200_OK,
-            data=LoginData(access_token=access_token, refresh_token=refresh_token),
+            data=LoginData(
+                access_token=access_token, 
+                refresh_token=refresh_token,
+                role=account.role.name  # Masukkan role ke dalam LoginData
+            ),
             message="Login berhasil",
         )
 
