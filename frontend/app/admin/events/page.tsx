@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react";
 
 interface Event {
@@ -12,6 +13,8 @@ interface Event {
 }
 
 export default function EventsPage() {
+  const router = useRouter()
+
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,13 +37,13 @@ export default function EventsPage() {
 
   // Fungsi logout
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "http://localhost:3000/auth/login";
+    localStorage.removeItem("token")
+    router.push("/auth/login")
   };
 
   // Fungsi back to landing
   const handleBackToLanding = () => {
-    window.location.href = "http://localhost:3000"; // ganti dengan URL landing Anda
+    router.push("/")
   };
 
   const fetchEvents = useCallback(async () => {
