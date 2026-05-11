@@ -14,6 +14,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
 
+  const getRoleFromToken = (token: string) => {
+    try {
+      const base64Url = token.split(".")[1]
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+      const payload = JSON.parse(window.atob(base64))
+
+      return payload.role_name
+    } catch (error) {
+      console.error("Failed to decode token", error)
+      return null
+    }
+  }
+
   const handleLogin = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
 
@@ -45,11 +58,21 @@ export default function LoginPage() {
         return
       }
 
-      localStorage.setItem("token", data.data.access_token)
-      localStorage.setItem("refresh_token", data.data.refresh_token)
+      const accessToken = data.data.access_token
+      const refreshToken = data.data.refresh_token
+
+      localStorage.setItem("token", accessToken)
+      localStorage.setItem("refresh_token", refreshToken)
+
+      const role = getRoleFromToken(accessToken)
 
       alert("Login berhasil!")
-      router.push("/admin/events")
+
+      if (role === "ADMIN") {
+        router.push("/admin/events")
+      } else {
+        router.push("/")
+      }
     } catch (error) {
       console.error(error)
       alert("Terjadi kesalahan saat login")

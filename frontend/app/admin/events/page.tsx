@@ -35,6 +35,19 @@ export default function EventsPage() {
 
   const API_URL = "http://127.0.0.1:8000";
 
+  const getRoleFromToken = (token: string) => {
+    try {
+      const base64Url = token.split(".")[1]
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+      const payload = JSON.parse(window.atob(base64))
+
+      return payload.role_name
+    } catch (error) {
+      console.error("Failed to decode token", error)
+      return null
+    }
+  }
+
   // Fungsi logout
   const handleLogout = () => {
     localStorage.removeItem("token")
@@ -62,13 +75,23 @@ export default function EventsPage() {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token")
+
     if (!token) {
-      window.location.href = "http://localhost:3000/auth/login";
-      return;
+      window.location.href = "/auth/login"
+      return
     }
-    fetchEvents();
-  }, [fetchEvents]);
+
+    const role = getRoleFromToken(token)
+
+    if (role !== "ADMIN") {
+      alert("Akses ditolak.")
+      window.location.href = "/"
+      return
+    }
+
+    fetchEvents()
+  }, [fetchEvents])
 
   const resetForm = () => {
     setName("");

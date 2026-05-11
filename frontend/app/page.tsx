@@ -35,10 +35,14 @@ export default function HomePage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [currentRole, setCurrentRole] = useState<string | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
+    const role = getRoleFromToken(token)
+
     setIsLoggedIn(!!token)
+    setCurrentRole(role)
   }, [])
 
   useEffect(() => {
@@ -72,7 +76,9 @@ export default function HomePage() {
   const handleLogout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("refresh_token")
+
     setIsLoggedIn(false)
+    setCurrentRole(null)
   }
 
   const getEventStatus = (quota: number) => {
@@ -120,8 +126,10 @@ export default function HomePage() {
           .includes(search.toLowerCase());
 
       const matchFilter =
-        filter === "Semua"
-          ? true
+      filter === "Semua"
+        ? true
+        : filter === "Tersedia"
+          ? event.quota > 0
           : status.text === filter;
 
       return matchSearch && matchFilter;
@@ -153,15 +161,24 @@ export default function HomePage() {
   };
 
   const getRoleFromToken = (token: string | null) => {
-    if (!token) return null;
+    if (!token) return null
 
     try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      return payload.role_name;
-    } catch {
-      return null;
+      const base64Url = token.split(".")[1]
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+      const paddedBase64 = base64.padEnd(
+        base64.length + ((4 - (base64.length % 4)) % 4),
+        "="
+      )
+
+      const payload = JSON.parse(window.atob(paddedBase64))
+
+      return payload.role_name || payload.role || null
+    } catch (error) {
+      console.error("Failed to decode token", error)
+      return null
     }
-  };
+  }
 
   const handleRegisterEvent = async (event: Event) => {
     const token = localStorage.getItem("token");
@@ -282,61 +299,60 @@ export default function HomePage() {
           </div>
         <div className="flex items-center gap-3">
           {isLoggedIn ? (
-              <>
+            <>
+              {currentRole === "ADMIN" && (
                 <Link
                   href="/admin/events"
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
                 >
                   Dashboard Admin
                 </Link>
+              )}
 
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/auth/login"
+                className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
+              >
+                Login
+              </Link>
+
+              <div className="group relative">
                 <button
                   type="button"
-                  onClick={handleLogout}
-                  className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
+                  className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
                 >
-                  Logout
+                  Register
+                  <span className="text-xs transition group-hover:rotate-180">▼</span>
                 </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/auth/login"
-                  className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
-                >
-                  Login
-                </Link>
 
-                <div className="group relative">
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                <div className="invisible absolute right-0 top-full z-50 mt-2 w-56 translate-y-2 rounded-2xl border border-slate-200 bg-white p-2 opacity-0 shadow-xl transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                  <Link
+                    href="/auth/register"
+                    className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-600"
                   >
-                    Register
+                    Register as User
+                  </Link>
 
-                    <span className="text-xs transition group-hover:rotate-180">
-                      ▼
-                    </span>
-                  </button>
-
-                  <div className="invisible absolute right-0 top-full z-50 mt-2 w-56 translate-y-2 rounded-2xl border border-slate-200 bg-white p-2 opacity-0 shadow-xl transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                    <Link
-                      href="/auth/register"
-                      className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-600"
-                    >
-                      Register as User
-                    </Link>
-
-                    <Link
-                      href="/auth/register/admin"
-                      className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-600"
-                    >
-                      Register as Admin
-                    </Link>
-                  </div>
+                  <Link
+                    href="/auth/register/admin"
+                    className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-600"
+                  >
+                    Register as Admin
+                  </Link>
                 </div>
-              </>
-            )}
+              </div>
+            </>
+          )}
           </div>
         </nav>
       </header>
