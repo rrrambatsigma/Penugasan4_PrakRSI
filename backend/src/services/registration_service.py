@@ -11,7 +11,7 @@ from src.dto.registration import (
     RegistrationDetailResponse,
     RegistrationListResponse,
     RegistrationRead,
-    RegistrationResponse
+    # RegistrationResponse
 )
 from src.repositories.registration_repository import RegistrationRepository
 
@@ -43,9 +43,17 @@ class RegistrationService:
         if existing:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"code": status.HTTP_409_CONFLICT, "data": None, "message": "User sudah terdaftar pada event ini"})
 
-        active_total = self.registration_repository.count_active_by_event(data.event_id)
-        if event.quota is not None and active_total >= event.quota:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"code": status.HTTP_400_BAD_REQUEST, "data": None, "message": "Kuota event sudah penuh"})
+        if event.quota is not None and event.quota <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": status.HTTP_400_BAD_REQUEST,
+                    "data": None,
+                    "message": "Kuota event sudah penuh",
+                },
+            )
+
+        event.quota -= 1
         
         registration = Registration(
             user_id=target_user_id,

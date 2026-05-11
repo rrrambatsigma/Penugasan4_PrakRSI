@@ -40,22 +40,7 @@ app = FastAPI(title="Acara RSI API", lifespan=lifespan)
 # =========================
 # CORS CONFIGURATION
 # =========================
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 register_exception_handlers(app)
-
 
 app.add_middleware(
     AuthMiddleware,
@@ -69,6 +54,19 @@ app.add_middleware(
         ProtectedRoute("/users", ["GET", "POST", "PUT", "PATCH", "DELETE"]),
         ProtectedRoute("/registrations", ["GET", "PATCH", "DELETE"]),
     ],
+)
+
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
