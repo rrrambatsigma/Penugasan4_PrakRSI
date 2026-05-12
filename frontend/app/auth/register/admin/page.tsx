@@ -240,6 +240,7 @@ export default function RegisterAdminPage() {
                     id="first_name"
                     name="first_name"
                     type="text"
+                    placeholder="John"
                     value={form.first_name}
                     onChange={handleChange}
                     className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-800 focus:bg-white focus:ring-4 focus:ring-slate-100"
@@ -257,6 +258,7 @@ export default function RegisterAdminPage() {
                     id="last_name"
                     name="last_name"
                     type="text"
+                    placeholder="Doe"
                     value={form.last_name}
                     onChange={handleChange}
                     className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-800 focus:bg-white focus:ring-4 focus:ring-slate-100"
@@ -275,6 +277,7 @@ export default function RegisterAdminPage() {
                   id="whatsapp_number"
                   name="whatsapp_number"
                   type="text"
+                  placeholder="+62123456789"
                   value={form.whatsapp_number}
                   onChange={handleChange}
                   className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-800 focus:bg-white focus:ring-4 focus:ring-slate-100"
@@ -299,6 +302,7 @@ export default function RegisterAdminPage() {
                   id="username"
                   name="username"
                   type="text"
+                  placeholder="johndoe"
                   value={form.username}
                   maxLength={16}
                   onChange={handleChange}
@@ -321,6 +325,7 @@ export default function RegisterAdminPage() {
                   id="email"
                   name="email"
                   type="email"
+                  placeholder="john.doe@example.com"
                   value={form.email}
                   onChange={handleChange}
                   className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-800 focus:bg-white focus:ring-4 focus:ring-slate-100"

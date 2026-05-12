@@ -32,6 +32,8 @@ export default function HomePage() {
   const [filter, setFilter] = useState("Semua");
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+
   const ITEMS_PER_PAGE = 3;
   const showMessage = (text: string, error = false) => {
     setMessage(text)
@@ -343,7 +345,7 @@ export default function HomePage() {
 
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutModal(true)}
                 className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
               >
                 Logout
@@ -679,6 +681,41 @@ export default function HomePage() {
                 className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Konfirmasi Daftar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold text-slate-900">
+              Keluar dari akun?
+            </h2>
+
+            <p className="mt-3 text-slate-500">
+              Apakah kamu yakin ingin logout dari sistem?
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                Tidak
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleLogout()
+                  setShowLogoutModal(false)
+                }}
+                className="flex-1 rounded-xl bg-red-500 px-4 py-3 font-semibold text-white transition hover:bg-red-600"
+              >
+                Ya, Logout
               </button>
             </div>
           </div>
