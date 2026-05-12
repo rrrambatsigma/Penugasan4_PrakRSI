@@ -23,6 +23,8 @@ export default function HomePage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("")
+  const [isError, setIsError] = useState(false)
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
@@ -31,8 +33,16 @@ export default function HomePage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const ITEMS_PER_PAGE = 3;
+  const showMessage = (text: string, error = false) => {
+    setMessage(text)
+    setIsError(error)
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+    setTimeout(() => {
+      setMessage("")
+    }, 3000)
+  }
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [currentRole, setCurrentRole] = useState<string | null>(null)
@@ -81,7 +91,25 @@ export default function HomePage() {
     setCurrentRole(null)
   }
 
-  const getEventStatus = (quota: number) => {
+  const getEventStatus = (
+    quota: number,
+    endedAt: string
+  ) => {
+    const now = new Date()
+    const endDate = new Date(endedAt)
+
+    // Event sudah selesai
+    if (endDate < now) {
+      return {
+        text: "Selesai",
+        statusColor:
+          "bg-slate-200 text-slate-600",
+        progressColor: "bg-slate-400",
+        progressWidth: "100%",
+      }
+    }
+
+    // Kuota habis
     if (quota <= 0) {
       return {
         text: "Penuh",
@@ -89,9 +117,10 @@ export default function HomePage() {
           "bg-gray-200 text-gray-600",
         progressColor: "bg-gray-400",
         progressWidth: "100%",
-      };
+      }
     }
 
+    // Hampir penuh
     if (quota <= 10) {
       return {
         text: "Hampir Penuh",
@@ -99,22 +128,24 @@ export default function HomePage() {
           "bg-orange-100 text-orange-700",
         progressColor: "bg-orange-500",
         progressWidth: "85%",
-      };
+      }
     }
 
+    // Masih tersedia
     return {
       text: "Tersedia",
       statusColor:
         "bg-emerald-100 text-emerald-700",
       progressColor: "bg-emerald-500",
-      progressWidth: "55%",
-    };
-  };
+      progressWidth: "100%",
+    }
+  }
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
       const status = getEventStatus(
-        event.quota
+        event.quota,
+        event.ended_at
       );
 
       const matchSearch =
@@ -126,10 +157,8 @@ export default function HomePage() {
           .includes(search.toLowerCase());
 
       const matchFilter =
-      filter === "Semua"
-        ? true
-        : filter === "Tersedia"
-          ? event.quota > 0
+        filter === "Semua"
+          ? true
           : status.text === filter;
 
       return matchSearch && matchFilter;
@@ -185,18 +214,18 @@ export default function HomePage() {
     const role = getRoleFromToken(token);
 
     if (!token) {
-      alert("Silakan login sebagai User terlebih dahulu.");
+      showMessage("Silakan login sebagai User terlebih dahulu.", true)
       router.push("/auth/login");
       return;
     }
 
     if (role !== "USER") {
-      alert("Pendaftaran event hanya untuk akun User, bukan Admin.");
+      showMessage("Pendaftaran event hanya untuk akun User, bukan Admin.", true)
       return;
     }
 
     if (event.quota <= 0) {
-      alert("Kuota event sudah penuh.");
+      showMessage("Kuota event sudah penuh.", true)
       return;
     }
 
@@ -215,11 +244,14 @@ export default function HomePage() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.detail?.message || result.message || "Gagal mendaftar event.");
+        showMessage(
+          result.detail?.message || result.message || "Gagal mendaftar event.",
+          true
+        )
         return;
       }
 
-      alert("Berhasil mendaftar event.");
+      showMessage("Berhasil mendaftar event.")
 
       setEvents((prevEvents) =>
         prevEvents.map((item) =>
@@ -233,7 +265,7 @@ export default function HomePage() {
       );
     } catch (error) {
       console.error(error);
-      alert("Terjadi kesalahan saat mendaftar event.");
+      showMessage("Terjadi kesalahan saat mendaftar event.", true)
     }
   };
 
@@ -357,6 +389,20 @@ export default function HomePage() {
         </nav>
       </header>
 
+      {message && (
+        <div className="fixed top-24 left-1/2 z-[200] -translate-x-1/2">
+          <div
+            className={`rounded-2xl px-6 py-4 text-sm font-bold shadow-2xl ${
+              isError
+                ? "bg-red-100 text-red-700"
+                : "bg-green-100 text-green-700"
+            }`}
+          >
+            {message}
+          </div>
+        </div>
+      )}
+      
       <section className="mx-auto max-w-7xl px-6 pb-10 pt-16 text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 md:text-6xl">
           Discover Competition Events
@@ -397,6 +443,7 @@ export default function HomePage() {
             "Tersedia",
             "Hampir Penuh",
             "Penuh",
+            "Selesai",
           ].map((item) => (
             <button
               key={item}
@@ -430,7 +477,7 @@ export default function HomePage() {
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {paginatedEvents.map((event) => {
                 const status =
-                  getEventStatus(event.quota);
+                  getEventStatus(event.quota, event.ended_at);
 
                 return (
                   <article
@@ -482,9 +529,12 @@ export default function HomePage() {
                     <div className="mt-6 grid grid-cols-2 gap-3">
                       <button
                         type="button"
-                        onClick={() => handleRegisterEvent(event)}
+                        onClick={() => setSelectedEvent(event)}
                         className="rounded-xl bg-indigo-600 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={event.quota <= 0}
+                        disabled={
+                          event.quota <= 0 ||
+                          new Date(event.ended_at) < new Date()
+                        }
                       >
                         Daftar
                       </button>
@@ -622,10 +672,13 @@ export default function HomePage() {
                   handleRegisterEvent(selectedEvent);
                   setSelectedEvent(null);
                 }}
-                disabled={selectedEvent.quota <= 0}
+                disabled={
+                  selectedEvent.quota <= 0 ||
+                  new Date(selectedEvent.ended_at) < new Date()
+                }
                 className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Daftar Event
+                Konfirmasi Daftar
               </button>
             </div>
           </div>

@@ -8,11 +8,13 @@ import type { SyntheticEvent } from "react"
 export default function LoginPage() {
   const router = useRouter()
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
-
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState("")
+  const [isError, setIsError] = useState(false)
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
 
   const getRoleFromToken = (token: string) => {
     try {
@@ -27,19 +29,23 @@ export default function LoginPage() {
     }
   }
 
+  const showMessage = (text: string, error = false) => {
+    setMessage(text)
+    setIsError(error)
+  }
+
   const handleLogin = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if (!identifier || !password) {
-      alert("Email/username dan password wajib diisi")
+      showMessage("Email/username dan password wajib diisi", true)
       return
     }
 
     setLoading(true)
+    setMessage("")
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
-
       const response = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: {
@@ -54,7 +60,7 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        alert(data.detail?.message || data.message || "Login gagal")
+        showMessage(data.detail?.message || data.message || "Login gagal", true)
         return
       }
 
@@ -66,16 +72,18 @@ export default function LoginPage() {
 
       const role = getRoleFromToken(accessToken)
 
-      alert("Login berhasil!")
+      showMessage("Login berhasil!", false)
 
-      if (role === "ADMIN") {
-        router.push("/admin/events")
-      } else {
-        router.push("/")
-      }
+      setTimeout(() => {
+        if (role === "ADMIN") {
+          router.push("/admin/events")
+        } else {
+          router.push("/")
+        }
+      }, 1000)
     } catch (error) {
       console.error(error)
-      alert("Terjadi kesalahan saat login")
+      showMessage("Terjadi kesalahan saat login", true)
     } finally {
       setLoading(false)
     }
@@ -85,7 +93,6 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 px-4 py-8 text-slate-900">
       <div className="mx-auto flex min-h-[calc(100vh-64px)] w-full max-w-4xl items-center justify-center">
         <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl">
-
           <p className="text-center text-sm font-semibold uppercase tracking-[0.3em] text-indigo-500">
             Acara RSI
           </p>
@@ -98,8 +105,19 @@ export default function LoginPage() {
             Masuk sebagai admin untuk mengelola event.
           </p>
 
-          <form onSubmit={handleLogin} className="mt-8 space-y-5">
+          {message && (
+            <div
+              className={`mt-6 rounded-2xl px-4 py-3 text-center text-sm font-bold ${
+                isError
+                  ? "bg-red-100 text-red-700"
+                  : "bg-green-100 text-green-700"
+              }`}
+            >
+              {message}
+            </div>
+          )}
 
+          <form onSubmit={handleLogin} className="mt-8 space-y-5">
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-700">
                 Username / Email

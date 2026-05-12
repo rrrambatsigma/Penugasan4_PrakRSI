@@ -379,7 +379,7 @@ export default function EventsPage() {
                     event.quota === 0
                       ? { label: "Penuh", badge: "bg-gray-200 text-gray-700" }
                       : isDone
-                      ? { label: "Done", badge: "bg-slate-200 text-slate-700" }
+                      ? { label: "Selesai", badge: "bg-slate-200 text-slate-700" }
                       : event.quota <= 10
                       ? { label: "Hampir Penuh", badge: "bg-orange-100 text-orange-700" }
                       : { label: "Tersedia", badge: "bg-emerald-100 text-emerald-700" };
